@@ -9,11 +9,15 @@ Umgebungsvariablen:
                                           Passende Gerichte werden mit ⭐ markiert.
 
 Test ohne Telegram:  python mensa.py --dry
+
+Eigenständig: braucht keine andere Datei aus dem Repo (pip install requests beautifulsoup4).
 """
 
 import os
+import random
 import re
 import sys
+import time
 from datetime import datetime
 from urllib.parse import unquote
 from zoneinfo import ZoneInfo
@@ -21,7 +25,37 @@ from zoneinfo import ZoneInfo
 import requests
 from bs4 import BeautifulSoup
 
-from tracker import UA, get_retry, notify
+
+UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+)
+
+
+def get_retry(session, url, **kwargs):
+    """GET mit einem zweiten Versuch nach kurzer Pause bei 403/429."""
+    r = session.get(url, **kwargs)
+    if r.status_code in (403, 429):
+        time.sleep(random.uniform(8, 12))
+        r = session.get(url, **kwargs)
+    return r
+
+
+def notify(text):
+    token, chat = os.getenv("TELEGRAM_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
+    print(text)
+    if not (token and chat):
+        print(f"Telegram: Token gesetzt: {bool(token)}, Chat-ID gesetzt: {bool(chat)} -> nichts gesendet")
+        return
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data={"chat_id": chat, "text": text},
+            timeout=20,
+        )
+        print(f"Telegram: Status {r.status_code} {r.text[:200]}")
+    except requests.RequestException as e:
+        print(f"Telegram Netzwerkfehler: {e}")
 
 URL = "https://www.stw-thueringen.de/mensen/schmalkalden/mensa-blechhammer.html"
 NAME = "Mensa Blechhammer"
