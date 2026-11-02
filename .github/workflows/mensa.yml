@@ -1,1 +1,26 @@
+name: mensa
 
+on:
+  schedule:
+    - cron: "0 7 * * 1-5"   # Mo-Fr, 07:00 UTC (= 08:00 Winterzeit / 09:00 Sommerzeit)
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten installieren
+        run: pip install requests beautifulsoup4
+
+      - name: Mensaplan senden
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MENSA_WATCH: ${{ vars.MENSA_WATCH }}
+        run: python mensa.py
